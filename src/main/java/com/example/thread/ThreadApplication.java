@@ -27,14 +27,14 @@ public class ThreadApplication {
             futures.add(future);
         }
 
-//        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-//
-//        try {
-//            combinedFuture.get();
-//        } catch (InterruptedException | ExecutionException e) {
-//            e.printStackTrace();
-//        }
-//
+        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        try {
+            combinedFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+
 
         futures.forEach(future -> {
             future.handle((result, ex) -> {
