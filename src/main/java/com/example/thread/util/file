@@ -1,1 +1,111 @@
-git
+import org.junit.Test;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+import static org.junit.Assert.assertEquals;
+
+public class ApiMetadataVoTest {
+
+    @Test
+    public void testAppendToUrl() throws URISyntaxException {
+        // Arrange
+        String url = "https://example.com";
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("param1", "value1");
+        parameters.put("param2", "value2");
+
+        // Create an instance of ApiMetadataVo
+        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+
+        // Act
+        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
+
+        // Assert
+        String expectedUrl = "https://example.com?param1=value1&param2=value2";
+        assertEquals(expectedUrl, appendedUrl);
+    }
+
+    // Additional test methods can be added for different scenarios
+}
+
+
+import org.junit.Test;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+import static org.junit.Assert.assertEquals;
+
+public class ApiMetadataVoTest {
+
+    @Test
+    public void testAppendToUrl() throws URISyntaxException {
+        // Arrange
+        String url = "http://example.com";
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("name", "John");
+
+        // Create an instance of ApiMetadataVo
+        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+
+        // Act
+        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
+
+        // Assert
+        String expectedUrl = "http://example.com?name=John";
+        assertEquals(expectedUrl, appendedUrl);
+    }
+
+    @Test
+    public void testAppendToUrl_withFragment() throws URISyntaxException {
+        // Arrange
+        String url = "http://example.com#fragment";
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("name", "John");
+
+        // Create an instance of ApiMetadataVo
+        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+
+        // Act
+        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
+
+        // Assert
+        String expectedUrl = "http://example.com?name=John#fragment";
+        assertEquals(expectedUrl, appendedUrl);
+    }
+
+    @Test
+    public void testAppendToUrl_withExistingQuery() throws URISyntaxException {
+        // Arrange
+        String url = "http://example.com?email=john.doe@email.com";
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("name", "John");
+
+        // Create an instance of ApiMetadataVo
+        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+
+        // Act
+        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
+
+        // Assert
+        String expectedUrl = "http://example.com?email=john.doe@email.com&name=John";
+        assertEquals(expectedUrl, appendedUrl);
+    }
+
+    @Test
+    public void testAppendToUrl_withExistingQueryAndFragment() throws URISyntaxException {
+        // Arrange
+        String url = "http://example.com?email=john.doe@email.com#fragment";
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("name", "John");
+
+        // Create an instance of ApiMetadataVo
+        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+
+        // Act
+        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
+
+        // Assert
+        String expectedUrl = "http://example.com?email=john.doe@email.com&name=John#fragment";
+        assertEquals(expectedUrl, appendedUrl);
+    }
+}
