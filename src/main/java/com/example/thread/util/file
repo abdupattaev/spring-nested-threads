@@ -1,93 +1,66 @@
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+public EndpointResponseData invokeEndpoint(int trackId, ApiMetadataVo apiMetadataVo) {
+    EndpointResponseData endpointResponseData = new EndpointResponseData();
 
-import java.net.URI;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+    try {
+        Map<String, String> params = createParams(apiMetadataVo);
+        String data = fetchDataBasedOnPagination(apiMetadataVo, trackId, params);
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
-
-@ExtendWith(MockitoExtension.class)
-public class ConfigServiceClientTest {
-
-    @Mock
-    private RestTemplate restTemplate;
-
-    @Mock
-    private SmsPropertyManager smsPropertyManager;
-
-    @Mock
-    private KerberosJwtUtil kerberosJwtUtil;
-
-    private ConfigServiceClient configServiceClient;
-
-    @BeforeEach
-    public void setUp() {
-        configServiceClient = new ConfigServiceClient(restTemplate, smsPropertyManager, kerberosJwtUtil);
+        endpointResponseData.setResponseData(data);
+        endpointResponseData.setTotalPages(getTotalPages(data));
+        endpointResponseData.setPageSize(getPageSize(apiMetadataVo));
+        endpointResponseData.setTotalRecords(getTotalRecords(data));
+    } catch (IOException e) {
+        log.error("TrackId: {} encountered an exception while invoking endpoint {} with attributes isPaginated: {}, pageSize: {}",
+            trackId,
+            apiMetadataVo.getInvocationUrl(),
+            apiMetadataVo.getApiAttrbs().get(PAGINATION),
+            apiMetadataVo.getApiAttrbs().get(PAGE_SIZE));
+        throw new RegReportingServiceException(ExceptionUtils.getStackTrace(e));
     }
 
-    @Test
-    public void getExternalApiMetadataTest() throws Exception {
-        String donorSystem = "donor";
-        Integer trackId = 1;
-        URI uri = UriComponentsBuilder.fromHttpUrl("http://localhost/metadata/" + donorSystem).encode().build().toUri();
+    return endpointResponseData;
+}
 
-        when(smsPropertyManager.getMarketPlaceGetApiMetadataUrl()).thenReturn("http://localhost/metadata/");
-        when(kerberosJwtUtil.generateKerberosJwt()).thenReturn("token");
-
-        ApiMetadataListResponse mockResponse = new ApiMetadataListResponse();
-        ResponseEntity<ApiMetadataListResponse> responseEntity = new ResponseEntity<>(mockResponse, HttpStatus.OK);
-        when(restTemplate.exchange(eq(uri), eq(HttpMethod.GET), any(), eq(ApiMetadataListResponse.class))).thenReturn(responseEntity);
-
-        List<ApiMetadataVo> result = configServiceClient.getExternalApiMetadata(donorSystem, trackId);
-
-        assertNotNull(result);
+private Map<String, String> createParams(ApiMetadataVo apiMetadataVo) {
+    Map<String, String> params = new HashMap<>();
+    if (GenericUtil.getIsPaginated(apiMetadataVo.getApiAttrbs())) {
+        params.put(PAGE_PARAM, String.valueOf(1));
+        params.put(PAGE_SIZE_PARAM, String.valueOf(GenericUtil.getPageSize(apiMetadataVo.getApiAttrbs())));
     }
+    return params;
+}
 
-    @Test
-    public void generateTrackIdTest() throws Exception {
-        String reportingSystem = "reporting";
-        Date asOfDate = new Date();
-        Integer reportPeriodId = 1;
-        URI uri = UriComponentsBuilder.fromHttpUrl("http://localhost/trackId").encode().build().toUri();
-
-        when(smsPropertyManager.getMarketPlaceGetRequestId()).thenReturn("http://localhost/trackId");
-        when(kerberosJwtUtil.generateKerberosJwt()).thenReturn("token");
-
-        RegReportResponse mockResponse = new RegReportResponse();
-        ResponseEntity<RegReportResponse> responseEntity = new ResponseEntity<>(mockResponse, HttpStatus.OK);
-        when(restTemplate.exchange(eq(uri), eq(HttpMethod.POST), any(), eq(RegReportResponse.class))).thenReturn(responseEntity);
-
-        Integer result = configServiceClient.generateTrackId(reportingSystem, asOfDate, reportPeriodId);
-
-        assertNotNull(result);
+private String fetchDataBasedOnPagination(ApiMetadataVo apiMetadataVo, int trackId, Map<String, String> params) throws IOException {
+    String data;
+    if (params.isEmpty()) {
+        data = fetchSinglePageData(apiMetadataVo, trackId);
+    } else {
+        apiMetadataVo.buildGETUrlWithParams(params);
+        data = fetchSinglePageData(1, GenericUtil.getPageSize(apiMetadataVo.getApiAttrbs()), apiMetadataVo, trackId);
     }
+    return data;
+}
 
-    @Test
-    public void getRequestStatusTest() throws Exception {
-        String reportingSystem = "reporting";
-        Integer trackId = 1;
-        URI uri = UriComponentsBuilder.fromHttpUrl("http://localhost/status/" + trackId).encode().build().toUri();
+private Integer getTotalPages(String data) throws IOException {
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode rootNode = objectMapper.readTree(data);
+    return Optional.ofNullable(rootNode.get(PAGINATION))
+            .flatMap(paginationNode -> Optional.ofNullable(paginationNode.get(TOTAL_PAGES)))
+            .map(JsonNode::asInt)
+            .orElse(1);
+}
 
-        when(smsPropertyManager.getMarketPlaceGetRequestStatus()).thenReturn("http://localhost/status/");
-        when(kerberosJwtUtil.generateKerberosJwt()).thenReturn("token");
+private Integer getTotalRecords(String data) throws IOException {
+    ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode rootNode = objectMapper.readTree(data);
+    return Optional.ofNullable(rootNode.get(PAGINATION))
+            .flatMap(paginationNode -> Optional.ofNullable(paginationNode.get(TOTAL_RESULTS)))
+            .map(JsonNode::asInt)
+            .orElse(0);
+}
 
-        EtlRequestStatusResponse mockResponse = new EtlRequestStatusResponse();
-        ResponseEntity<EtlRequestStatusResponse> responseEntity = new ResponseEntity<>(mockResponse, HttpStatus.OK);
-        when(restTemplate.exchange(eq(uri), eq(HttpMethod.GET), any(), eq(EtlRequestStatusResponse.class))).thenReturn(responseEntity);
-
-        EtlRequestStatusResponse result = configServiceClient.getRequestStatus(reportingSystem, trackId);
-
-        assertNotNull(result);
-    }
+private Integer getPageSize(ApiMetadataVo apiMetadataVo) {
+    return Optional.ofNullable(apiMetadataVo.getApiAttrbs().get(PAGE_SIZE))
+            .map(Integer::valueOf)
+            .orElse(0);
 }
