@@ -1,66 +1,41 @@
-public EndpointResponseData invokeEndpoint(int trackId, ApiMetadataVo apiMetadataVo) {
-    EndpointResponseData endpointResponseData = new EndpointResponseData();
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import static org.mockito.Mockito.*;
 
-    try {
-        Map<String, String> params = createParams(apiMetadataVo);
-        String data = fetchDataBasedOnPagination(apiMetadataVo, trackId, params);
+class FHFMarketPlaceAPIServiceTest {
 
-        endpointResponseData.setResponseData(data);
-        endpointResponseData.setTotalPages(getTotalPages(data));
-        endpointResponseData.setPageSize(getPageSize(apiMetadataVo));
-        endpointResponseData.setTotalRecords(getTotalRecords(data));
-    } catch (IOException e) {
-        log.error("TrackId: {} encountered an exception while invoking endpoint {} with attributes isPaginated: {}, pageSize: {}",
-            trackId,
-            apiMetadataVo.getInvocationUrl(),
-            apiMetadataVo.getApiAttrbs().get(PAGINATION),
-            apiMetadataVo.getApiAttrbs().get(PAGE_SIZE));
-        throw new RegReportingServiceException(ExceptionUtils.getStackTrace(e));
+    @Mock
+    private LocalStorageService localStorageService;
+    @Mock
+    private ApiMetadataVo apiMetadataVo;
+    @InjectMocks
+    private FHFMarketPlaceAPIService fhfMarketPlaceAPIService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
 
-    return endpointResponseData;
-}
+    @Test
+    void testConvertResponseAndSaveToLocal() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        ArrayNode arrayNode = objectMapper.createArrayNode();
+        String apiResponse = "[{\"field1\": \"value1\"}]";
+        String rspXpath = "/response/data";
+        Integer trackId = 1;
+        String sourceEffectiveDate = "2023-06-26";
+        String localfilePath = "/tmp/localFilePath";
 
-private Map<String, String> createParams(ApiMetadataVo apiMetadataVo) {
-    Map<String, String> params = new HashMap<>();
-    if (GenericUtil.getIsPaginated(apiMetadataVo.getApiAttrbs())) {
-        params.put(PAGE_PARAM, String.valueOf(1));
-        params.put(PAGE_SIZE_PARAM, String.valueOf(GenericUtil.getPageSize(apiMetadataVo.getApiAttrbs())));
+        when(apiMetadataVo.getApiAttrbs()).thenReturn("{\"rspXpath\":\"/response/data\"}");
+        doNothing().when(localStorageService).storePageDataWithOverwrite(any(ArrayNode.class), eq(localfilePath), eq(trackId), eq(true));
+
+        fhfMarketPlaceAPIService.convertResponseAndSaveToLocal(apiResponse, apiMetadataVo, localfilePath, trackId, sourceEffectiveDate);
+        verify(localStorageService, times(1)).storePageDataWithOverwrite(arrayNode, localfilePath, trackId, true);
     }
-    return params;
-}
-
-private String fetchDataBasedOnPagination(ApiMetadataVo apiMetadataVo, int trackId, Map<String, String> params) throws IOException {
-    String data;
-    if (params.isEmpty()) {
-        data = fetchSinglePageData(apiMetadataVo, trackId);
-    } else {
-        apiMetadataVo.buildGETUrlWithParams(params);
-        data = fetchSinglePageData(1, GenericUtil.getPageSize(apiMetadataVo.getApiAttrbs()), apiMetadataVo, trackId);
-    }
-    return data;
-}
-
-private Integer getTotalPages(String data) throws IOException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    JsonNode rootNode = objectMapper.readTree(data);
-    return Optional.ofNullable(rootNode.get(PAGINATION))
-            .flatMap(paginationNode -> Optional.ofNullable(paginationNode.get(TOTAL_PAGES)))
-            .map(JsonNode::asInt)
-            .orElse(1);
-}
-
-private Integer getTotalRecords(String data) throws IOException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    JsonNode rootNode = objectMapper.readTree(data);
-    return Optional.ofNullable(rootNode.get(PAGINATION))
-            .flatMap(paginationNode -> Optional.ofNullable(paginationNode.get(TOTAL_RESULTS)))
-            .map(JsonNode::asInt)
-            .orElse(0);
-}
-
-private Integer getPageSize(ApiMetadataVo apiMetadataVo) {
-    return Optional.ofNullable(apiMetadataVo.getApiAttrbs().get(PAGE_SIZE))
-            .map(Integer::valueOf)
-            .orElse(0);
 }
