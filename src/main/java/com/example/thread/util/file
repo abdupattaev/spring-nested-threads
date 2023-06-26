@@ -1,49 +1,40 @@
-import org.junit.jupiter.api.*;
-import org.mockito.Mockito;
+@Test
+void invokeEndpoint_Paginated_Success() throws Exception {
+    int trackId = 100;
+    ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+    EndpointResponseData endpointResponseData;
+    String expectedData = "{\"pagination\": {\"total_pages\": 10, \"total_results\": 50}}";
+    when(apiCallServiceClient.fetchSinglePageData(anyInt(), anyInt(), any(ApiMetadataVo.class), anyInt())).thenReturn(expectedData);
 
-import org.springframework.http.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+    endpointResponseData = apiCallServiceClient.invokeEndpoint(trackId, apiMetadataVo);
 
-class ApiCallServiceClientTest {
+    assertEquals(expectedData, endpointResponseData.getResponseData());
+    assertEquals(10, endpointResponseData.getTotalPages());
+    assertEquals(50, endpointResponseData.getTotalRecords());
+}
 
-    private ApiCallServiceClient apiCallServiceClient;
-    private RestServiceUtility mockRestServiceUtility;
-    private SmsPropertyManager mockSmsPropertyManager;
+@Test
+void invokeEndpoint_NonPaginated_Success() throws Exception {
+    int trackId = 100;
+    ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+    EndpointResponseData endpointResponseData;
+    String expectedData = "{\"key\": \"value\"}";
+    when(apiCallServiceClient.fetchSinglePageData(any(ApiMetadataVo.class), anyInt())).thenReturn(expectedData);
 
-    @BeforeEach
-    void setUp () {
-        mockRestServiceUtility = Mockito.mock(RestServiceUtility.class);
-        mockSmsPropertyManager = Mockito.mock(SmsPropertyManager.class);
-        apiCallServiceClient = new ApiCallServiceClient(mockRestServiceUtility, mockSmsPropertyManager);
-    }
+    endpointResponseData = apiCallServiceClient.invokeEndpoint(trackId, apiMetadataVo);
 
-    @Test
-    void fetchSinglePageData_Success() throws IOException, ApexException, RegReportingServiceException {
-        int page = 1;
-        int pageSize = 10;
-        ApiMetadatavo apiMetadataVo = new ApiMetadatavo();
-        String expectedBody = "Expected Body";
-        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(expectedBody, HttpStatus.OK);
+    assertEquals(expectedData, endpointResponseData.getResponseData());
+    assertEquals(1, endpointResponseData.getTotalPages());
+}
 
-        when(mockRestServiceUtility.call(any(ApiMetadatavo.class))).thenReturn(mockResponseEntity);
+@Test
+void invokeEndpoint_Exception() throws Exception {
+    int trackId = 100;
+    ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
 
-        String result = apiCallServiceClient.fetchSinglePageData(page, pageSize, apiMetadataVo, 100);
+    when(apiCallServiceClient.fetchSinglePageData(any(ApiMetadataVo.class), anyInt()))
+        .thenThrow(new RuntimeException("Test Exception"));
 
-        assertEquals(expectedBody, result);
-        verify(mockRestServiceUtility, times(1)).call(apiMetadataVo);
-    }
-
-    @Test
-    void fetchSinglePageData_Error() throws IOException, ApexException, RegReportingServiceException {
-        int page = 1;
-        int pageSize = 10;
-        ApiMetadatavo apiMetadataVo = new ApiMetadatavo();
-
-        when(mockRestServiceUtility.call(any(ApiMetadatavo.class)))
-            .thenThrow(new RuntimeException("Test Exception"));
-
-        assertThrows(RegReportingServiceException.class, () ->
-            apiCallServiceClient.fetchSinglePageData(page, pageSize, apiMetadataVo, 100));
-    }
+    assertThrows(RegReportingServiceException.class, () ->
+        apiCallServiceClient.invokeEndpoint(trackId, apiMetadataVo));
 }
