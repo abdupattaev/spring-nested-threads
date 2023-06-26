@@ -1,71 +1,49 @@
 import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 
-import java.io.IOException;
-
+import org.springframework.http.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class HadoopStorageServiceTest {
+class ApiCallServiceClientTest {
 
-    private HadoopStorageService hadoopStorageService;
-    private HadoopService mockHadoopService;
+    private ApiCallServiceClient apiCallServiceClient;
+    private RestServiceUtility mockRestServiceUtility;
+    private SmsPropertyManager mockSmsPropertyManager;
 
     @BeforeEach
     void setUp () {
-        mockHadoopService = Mockito.mock(HadoopService.class);
-        hadoopStorageService = new HadoopStorageService(mockHadoopService);
+        mockRestServiceUtility = Mockito.mock(RestServiceUtility.class);
+        mockSmsPropertyManager = Mockito.mock(SmsPropertyManager.class);
+        apiCallServiceClient = new ApiCallServiceClient(mockRestServiceUtility, mockSmsPropertyManager);
     }
 
     @Test
-    void uploadFileFromLocal_Success() throws IOException {
-        String localPath = "/path/to/local/file";
-        String hadoopOutputPath = "/path/to/hadoop/output";
-        String expectedHadoopPath = "/expected/hadoop/path";
+    void fetchSinglePageData_Success() throws IOException, ApexException, RegReportingServiceException {
+        int page = 1;
+        int pageSize = 10;
+        ApiMetadatavo apiMetadataVo = new ApiMetadatavo();
+        String expectedBody = "Expected Body";
+        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(expectedBody, HttpStatus.OK);
 
-        when(mockHadoopService.uploadLargeFileWithOverwrite(anyString(), anyString(), anyBoolean()))
-            .thenReturn(expectedHadoopPath);
+        when(mockRestServiceUtility.call(any(ApiMetadatavo.class))).thenReturn(mockResponseEntity);
 
-        String hadoopPath = hadoopStorageService.uploadFileFromLocal(localPath, hadoopOutputPath, 100);
+        String result = apiCallServiceClient.fetchSinglePageData(page, pageSize, apiMetadataVo, 100);
 
-        verify(mockHadoopService, times(1)).uploadLargeFileWithOverwrite(localPath, hadoopOutputPath, true);
-        assertEquals(expectedHadoopPath, hadoopPath);
+        assertEquals(expectedBody, result);
+        verify(mockRestServiceUtility, times(1)).call(apiMetadataVo);
     }
 
     @Test
-    void uploadFileFromLocal_Error() {
-        String localPath = "/path/to/local/file";
-        String hadoopOutputPath = "/path/to/hadoop/output";
+    void fetchSinglePageData_Error() throws IOException, ApexException, RegReportingServiceException {
+        int page = 1;
+        int pageSize = 10;
+        ApiMetadatavo apiMetadataVo = new ApiMetadatavo();
 
-        when(mockHadoopService.uploadLargeFileWithOverwrite(anyString(), anyString(), anyBoolean()))
-            .thenThrow(new RuntimeException("Test exception"));
+        when(mockRestServiceUtility.call(any(ApiMetadatavo.class)))
+            .thenThrow(new RuntimeException("Test Exception"));
 
-        assertThrows(IOException.class, () ->
-            hadoopStorageService.uploadFileFromLocal(localPath, hadoopOutputPath, 100));
-    }
-
-    @Test
-    void getLinesCountInFile_Success() throws IOException {
-        String hdfsFilePath = "/path/to/hdfs/file";
-        int expectedLinesCount = 10;
-
-        when(mockHadoopService.countLinesInFile(anyString()))
-            .thenReturn(expectedLinesCount);
-
-        int linesCount = hadoopStorageService.getLinesCountInFile(hdfsFilePath);
-
-        verify(mockHadoopService, times(1)).countLinesInFile(hdfsFilePath);
-        assertEquals(expectedLinesCount, linesCount);
-    }
-
-    @Test
-    void getLinesCountInFile_Error() {
-        String hdfsFilePath = "/path/to/hdfs/file";
-
-        when(mockHadoopService.countLinesInFile(anyString()))
-            .thenThrow(new RuntimeException("Test exception"));
-
-        assertThrows(IOException.class, () ->
-            hadoopStorageService.getLinesCountInFile(hdfsFilePath));
+        assertThrows(RegReportingServiceException.class, () ->
+            apiCallServiceClient.fetchSinglePageData(page, pageSize, apiMetadataVo, 100));
     }
 }
