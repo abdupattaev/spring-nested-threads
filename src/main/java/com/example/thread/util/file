@@ -1,40 +1,93 @@
-@Test
-void invokeEndpoint_Paginated_Success() throws Exception {
-    int trackId = 100;
-    ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
-    EndpointResponseData endpointResponseData;
-    String expectedData = "{\"pagination\": {\"total_pages\": 10, \"total_results\": 50}}";
-    when(apiCallServiceClient.fetchSinglePageData(anyInt(), anyInt(), any(ApiMetadataVo.class), anyInt())).thenReturn(expectedData);
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-    endpointResponseData = apiCallServiceClient.invokeEndpoint(trackId, apiMetadataVo);
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
-    assertEquals(expectedData, endpointResponseData.getResponseData());
-    assertEquals(10, endpointResponseData.getTotalPages());
-    assertEquals(50, endpointResponseData.getTotalRecords());
-}
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
-@Test
-void invokeEndpoint_NonPaginated_Success() throws Exception {
-    int trackId = 100;
-    ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
-    EndpointResponseData endpointResponseData;
-    String expectedData = "{\"key\": \"value\"}";
-    when(apiCallServiceClient.fetchSinglePageData(any(ApiMetadataVo.class), anyInt())).thenReturn(expectedData);
+@ExtendWith(MockitoExtension.class)
+public class ConfigServiceClientTest {
 
-    endpointResponseData = apiCallServiceClient.invokeEndpoint(trackId, apiMetadataVo);
+    @Mock
+    private RestTemplate restTemplate;
 
-    assertEquals(expectedData, endpointResponseData.getResponseData());
-    assertEquals(1, endpointResponseData.getTotalPages());
-}
+    @Mock
+    private SmsPropertyManager smsPropertyManager;
 
-@Test
-void invokeEndpoint_Exception() throws Exception {
-    int trackId = 100;
-    ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+    @Mock
+    private KerberosJwtUtil kerberosJwtUtil;
 
-    when(apiCallServiceClient.fetchSinglePageData(any(ApiMetadataVo.class), anyInt()))
-        .thenThrow(new RuntimeException("Test Exception"));
+    private ConfigServiceClient configServiceClient;
 
-    assertThrows(RegReportingServiceException.class, () ->
-        apiCallServiceClient.invokeEndpoint(trackId, apiMetadataVo));
+    @BeforeEach
+    public void setUp() {
+        configServiceClient = new ConfigServiceClient(restTemplate, smsPropertyManager, kerberosJwtUtil);
+    }
+
+    @Test
+    public void getExternalApiMetadataTest() throws Exception {
+        String donorSystem = "donor";
+        Integer trackId = 1;
+        URI uri = UriComponentsBuilder.fromHttpUrl("http://localhost/metadata/" + donorSystem).encode().build().toUri();
+
+        when(smsPropertyManager.getMarketPlaceGetApiMetadataUrl()).thenReturn("http://localhost/metadata/");
+        when(kerberosJwtUtil.generateKerberosJwt()).thenReturn("token");
+
+        ApiMetadataListResponse mockResponse = new ApiMetadataListResponse();
+        ResponseEntity<ApiMetadataListResponse> responseEntity = new ResponseEntity<>(mockResponse, HttpStatus.OK);
+        when(restTemplate.exchange(eq(uri), eq(HttpMethod.GET), any(), eq(ApiMetadataListResponse.class))).thenReturn(responseEntity);
+
+        List<ApiMetadataVo> result = configServiceClient.getExternalApiMetadata(donorSystem, trackId);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    public void generateTrackIdTest() throws Exception {
+        String reportingSystem = "reporting";
+        Date asOfDate = new Date();
+        Integer reportPeriodId = 1;
+        URI uri = UriComponentsBuilder.fromHttpUrl("http://localhost/trackId").encode().build().toUri();
+
+        when(smsPropertyManager.getMarketPlaceGetRequestId()).thenReturn("http://localhost/trackId");
+        when(kerberosJwtUtil.generateKerberosJwt()).thenReturn("token");
+
+        RegReportResponse mockResponse = new RegReportResponse();
+        ResponseEntity<RegReportResponse> responseEntity = new ResponseEntity<>(mockResponse, HttpStatus.OK);
+        when(restTemplate.exchange(eq(uri), eq(HttpMethod.POST), any(), eq(RegReportResponse.class))).thenReturn(responseEntity);
+
+        Integer result = configServiceClient.generateTrackId(reportingSystem, asOfDate, reportPeriodId);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    public void getRequestStatusTest() throws Exception {
+        String reportingSystem = "reporting";
+        Integer trackId = 1;
+        URI uri = UriComponentsBuilder.fromHttpUrl("http://localhost/status/" + trackId).encode().build().toUri();
+
+        when(smsPropertyManager.getMarketPlaceGetRequestStatus()).thenReturn("http://localhost/status/");
+        when(kerberosJwtUtil.generateKerberosJwt()).thenReturn("token");
+
+        EtlRequestStatusResponse mockResponse = new EtlRequestStatusResponse();
+        ResponseEntity<EtlRequestStatusResponse> responseEntity = new ResponseEntity<>(mockResponse, HttpStatus.OK);
+        when(restTemplate.exchange(eq(uri), eq(HttpMethod.GET), any(), eq(EtlRequestStatusResponse.class))).thenReturn(responseEntity);
+
+        EtlRequestStatusResponse result = configServiceClient.getRequestStatus(reportingSystem, trackId);
+
+        assertNotNull(result);
+    }
 }
