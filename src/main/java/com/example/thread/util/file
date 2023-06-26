@@ -1,54 +1,71 @@
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
-import java.nio.file.*;
-import java.util.Arrays;
-import java.util.List;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-class LocalStorageServiceTest {
-    private LocalStorageService localStorageService;
-    private List<String> tempFilesPaths;
-    private String outputPath;
+class HadoopStorageServiceTest {
+
+    private HadoopStorageService hadoopStorageService;
+    private HadoopService mockHadoopService;
 
     @BeforeEach
-    void setUp (@TempDir Path tempDir) {
-        localStorageService = new LocalStorageService();
-
-        tempFilesPaths = Arrays.asList(
-            tempDir.resolve("temp1.csv").toString(),
-            tempDir.resolve("temp2.csv").toString()
-        );
-
-        outputPath = tempDir.resolve("output.csv").toString();
+    void setUp () {
+        mockHadoopService = Mockito.mock(HadoopService.class);
+        hadoopStorageService = new HadoopStorageService(mockHadoopService);
     }
 
     @Test
-    void combineTemporaryFiles_Success() throws IOException {
-        String data1 = "field1,field2\nval1,val2\n";
-        String data2 = "field1,field2\nval3,val4\n";
+    void uploadFileFromLocal_Success() throws IOException {
+        String localPath = "/path/to/local/file";
+        String hadoopOutputPath = "/path/to/hadoop/output";
+        String expectedHadoopPath = "/expected/hadoop/path";
 
-        // Write data to temporary files
-        Files.writeString(Path.of(tempFilesPaths.get(0)), data1);
-        Files.writeString(Path.of(tempFilesPaths.get(1)), data2);
+        when(mockHadoopService.uploadLargeFileWithOverwrite(anyString(), anyString(), anyBoolean()))
+            .thenReturn(expectedHadoopPath);
 
-        localStorageService.combineTemporaryFiles(tempFilesPaths, outputPath, 100);
+        String hadoopPath = hadoopStorageService.uploadFileFromLocal(localPath, hadoopOutputPath, 100);
 
-        String content = Files.readString(Path.of(outputPath));
-        String expectedContent = "field1,field2\nval1,val2\nval3,val4\n";
-
-        assertEquals(expectedContent, content);
+        verify(mockHadoopService, times(1)).uploadLargeFileWithOverwrite(localPath, hadoopOutputPath, true);
+        assertEquals(expectedHadoopPath, hadoopPath);
     }
 
     @Test
-    void combineTemporaryFiles_NoSuchFile() {
-        // Here we are testing if it throws exception when file not found
-        String nonExistentPath = "/path/to/nonexistent/file.csv";
-        List<String> nonExistentPaths = Arrays.asList(nonExistentPath);
+    void uploadFileFromLocal_Error() {
+        String localPath = "/path/to/local/file";
+        String hadoopOutputPath = "/path/to/hadoop/output";
+
+        when(mockHadoopService.uploadLargeFileWithOverwrite(anyString(), anyString(), anyBoolean()))
+            .thenThrow(new RuntimeException("Test exception"));
 
         assertThrows(IOException.class, () ->
-            localStorageService.combineTemporaryFiles(nonExistentPaths, outputPath, 100));
+            hadoopStorageService.uploadFileFromLocal(localPath, hadoopOutputPath, 100));
+    }
+
+    @Test
+    void getLinesCountInFile_Success() throws IOException {
+        String hdfsFilePath = "/path/to/hdfs/file";
+        int expectedLinesCount = 10;
+
+        when(mockHadoopService.countLinesInFile(anyString()))
+            .thenReturn(expectedLinesCount);
+
+        int linesCount = hadoopStorageService.getLinesCountInFile(hdfsFilePath);
+
+        verify(mockHadoopService, times(1)).countLinesInFile(hdfsFilePath);
+        assertEquals(expectedLinesCount, linesCount);
+    }
+
+    @Test
+    void getLinesCountInFile_Error() {
+        String hdfsFilePath = "/path/to/hdfs/file";
+
+        when(mockHadoopService.countLinesInFile(anyString()))
+            .thenThrow(new RuntimeException("Test exception"));
+
+        assertThrows(IOException.class, () ->
+            hadoopStorageService.getLinesCountInFile(hdfsFilePath));
     }
 }
