@@ -1,111 +1,54 @@
-import org.junit.Test;
-import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
 
-public class ApiMetadataVoTest {
+import java.nio.file.*;
+import java.util.Arrays;
+import java.util.List;
+import java.io.IOException;
 
-    @Test
-    public void testAppendToUrl() throws URISyntaxException {
-        // Arrange
-        String url = "https://example.com";
-        HashMap<String, String> parameters = new HashMap<>();
-        parameters.put("param1", "value1");
-        parameters.put("param2", "value2");
+import static org.junit.jupiter.api.Assertions.*;
 
-        // Create an instance of ApiMetadataVo
-        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+class LocalStorageServiceTest {
+    private LocalStorageService localStorageService;
+    private List<String> tempFilesPaths;
+    private String outputPath;
 
-        // Act
-        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
+    @BeforeEach
+    void setUp (@TempDir Path tempDir) {
+        localStorageService = new LocalStorageService();
 
-        // Assert
-        String expectedUrl = "https://example.com?param1=value1&param2=value2";
-        assertEquals(expectedUrl, appendedUrl);
-    }
+        tempFilesPaths = Arrays.asList(
+            tempDir.resolve("temp1.csv").toString(),
+            tempDir.resolve("temp2.csv").toString()
+        );
 
-    // Additional test methods can be added for different scenarios
-}
-
-
-import org.junit.Test;
-import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
-import static org.junit.Assert.assertEquals;
-
-public class ApiMetadataVoTest {
-
-    @Test
-    public void testAppendToUrl() throws URISyntaxException {
-        // Arrange
-        String url = "http://example.com";
-        HashMap<String, String> parameters = new HashMap<>();
-        parameters.put("name", "John");
-
-        // Create an instance of ApiMetadataVo
-        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
-
-        // Act
-        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
-
-        // Assert
-        String expectedUrl = "http://example.com?name=John";
-        assertEquals(expectedUrl, appendedUrl);
+        outputPath = tempDir.resolve("output.csv").toString();
     }
 
     @Test
-    public void testAppendToUrl_withFragment() throws URISyntaxException {
-        // Arrange
-        String url = "http://example.com#fragment";
-        HashMap<String, String> parameters = new HashMap<>();
-        parameters.put("name", "John");
+    void combineTemporaryFiles_Success() throws IOException {
+        String data1 = "field1,field2\nval1,val2\n";
+        String data2 = "field1,field2\nval3,val4\n";
 
-        // Create an instance of ApiMetadataVo
-        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
+        // Write data to temporary files
+        Files.writeString(Path.of(tempFilesPaths.get(0)), data1);
+        Files.writeString(Path.of(tempFilesPaths.get(1)), data2);
 
-        // Act
-        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
+        localStorageService.combineTemporaryFiles(tempFilesPaths, outputPath, 100);
 
-        // Assert
-        String expectedUrl = "http://example.com?name=John#fragment";
-        assertEquals(expectedUrl, appendedUrl);
+        String content = Files.readString(Path.of(outputPath));
+        String expectedContent = "field1,field2\nval1,val2\nval3,val4\n";
+
+        assertEquals(expectedContent, content);
     }
 
     @Test
-    public void testAppendToUrl_withExistingQuery() throws URISyntaxException {
-        // Arrange
-        String url = "http://example.com?email=john.doe@email.com";
-        HashMap<String, String> parameters = new HashMap<>();
-        parameters.put("name", "John");
+    void combineTemporaryFiles_NoSuchFile() {
+        // Here we are testing if it throws exception when file not found
+        String nonExistentPath = "/path/to/nonexistent/file.csv";
+        List<String> nonExistentPaths = Arrays.asList(nonExistentPath);
 
-        // Create an instance of ApiMetadataVo
-        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
-
-        // Act
-        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
-
-        // Assert
-        String expectedUrl = "http://example.com?email=john.doe@email.com&name=John";
-        assertEquals(expectedUrl, appendedUrl);
-    }
-
-    @Test
-    public void testAppendToUrl_withExistingQueryAndFragment() throws URISyntaxException {
-        // Arrange
-        String url = "http://example.com?email=john.doe@email.com#fragment";
-        HashMap<String, String> parameters = new HashMap<>();
-        parameters.put("name", "John");
-
-        // Create an instance of ApiMetadataVo
-        ApiMetadataVo apiMetadataVo = new ApiMetadataVo();
-
-        // Act
-        String appendedUrl = apiMetadataVo.appendToUrl(url, parameters);
-
-        // Assert
-        String expectedUrl = "http://example.com?email=john.doe@email.com&name=John#fragment";
-        assertEquals(expectedUrl, appendedUrl);
+        assertThrows(IOException.class, () ->
+            localStorageService.combineTemporaryFiles(nonExistentPaths, outputPath, 100));
     }
 }
