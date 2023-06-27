@@ -1,3 +1,7 @@
-summary = "Get Status Details of External API Request",
-    description = "This operation fetches the status details of the data retrieval operation from external APIs based on the provided trackId. The trackId is generated when initiating the data fetch and save operation. The status provides insights into the data processing stages and possible errors if any.",
-    t
+ summary = "Get Status Details of External API Request",
+    description = "This operation fetches the status details of the data retrieval and save operation initiated by the 'launchReportTask' method. By providing the trackId, obtained from 'launchReportTask', one can monitor the progress of the operation, stages of data processing, and possible errors if any.",
+    tags
+
+    summary = "Launch Report Task from External APIs",
+        description = "This asynchronous operation initiates the data fetch and save process from specified external APIs. Data retrieved is paginated and saved as text files in the Hadoop Distributed File System (HDFS). Upon initiation, a unique trackId is returned which can be used to monitor the progress of the operation.",
+        t
