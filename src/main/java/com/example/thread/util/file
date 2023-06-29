@@ -1,32 +1,19 @@
+        JsonNodeFactory factory = new JsonNodeFactory(false);
+        // Create a new ArrayNode
+        ArrayNode newArrayNode = new ArrayNode(factory);
 
-Subject: Request for Teams Call to Review  API Endpoints
+        // Traverse old ArrayNode
+        for (JsonNode node : arrayNode) {
+            // Create a new ObjectNode
+            ObjectNode newObjectNode = factory.objectNode();
+            // Traverse each field in the object
+            node.fields().forEachRemaining(field -> {
+                String stringValue = field.getValue().asText(); // Convert value to string
+                newObjectNode.put(field.getKey(), stringValue);
+            });
+            newArrayNode.add(newObjectNode);
+        }
 
-Dear ,
-
-I hope this message finds you well.
-
-As a developer from the  team, I am currently working on user stories , which involve API calls for 's month-end data.
-
-I have managed to generate an access token for the production environment, however, I am facing challenges accessing the endpoints. Additionally, I need clarification regarding potential additional entitlements for the LDAP user in the production environment.
-
-In order to review these points, I believe a Microsoft Teams call would be beneficial. Can we schedule one at your earliest convenience? Your expertise would be incredibly valuable to facilitate our progress.
-
-Looking forward to hearing from you.
-
-Best regards,
-
-Subject: Teams Call for API Endpoint Review
-
-Hi ,
-
-Hope you're well. I'm working on the  team's API calls for TD-'s data and have a few questions.
-
-I've generated an access token for production but I'm having trouble accessing the endpoints. Also, I'm wondering if we need additional entitlements for the LDAP user in production.
-
-Could we set up a quick Teams call to go over these? It'd be really helpful.
-
-Thanks,
-
-
-
-Could you clarify if we require additional entitlements for the LDAP user when we move to production?
+        // Now you can use your newArrayNode for the csv conversion
+        System.out.println(newArrayNode);
+    }
