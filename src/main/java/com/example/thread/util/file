@@ -1,7 +1,32 @@
- summary = "Get Status Details of External API Request",
-    description = "This operation fetches the status details of the data retrieval and save operation initiated by the 'launchReportTask' method. By providing the trackId, obtained from 'launchReportTask', one can monitor the progress of the operation, stages of data processing, and possible errors if any.",
-    tags
 
-    summary = "Launch Report Task from External APIs",
-        description = "This asynchronous operation initiates the data fetch and save process from specified external APIs. Data retrieved is paginated and saved as text files in the Hadoop Distributed File System (HDFS). Upon initiation, a unique trackId is returned which can be used to monitor the progress of the operation.",
-        t
+Subject: Request for Teams Call to Review  API Endpoints
+
+Dear ,
+
+I hope this message finds you well.
+
+As a developer from the  team, I am currently working on user stories , which involve API calls for 's month-end data.
+
+I have managed to generate an access token for the production environment, however, I am facing challenges accessing the endpoints. Additionally, I need clarification regarding potential additional entitlements for the LDAP user in the production environment.
+
+In order to review these points, I believe a Microsoft Teams call would be beneficial. Can we schedule one at your earliest convenience? Your expertise would be incredibly valuable to facilitate our progress.
+
+Looking forward to hearing from you.
+
+Best regards,
+
+Subject: Teams Call for API Endpoint Review
+
+Hi ,
+
+Hope you're well. I'm working on the  team's API calls for TD-'s data and have a few questions.
+
+I've generated an access token for production but I'm having trouble accessing the endpoints. Also, I'm wondering if we need additional entitlements for the LDAP user in production.
+
+Could we set up a quick Teams call to go over these? It'd be really helpful.
+
+Thanks,
+
+
+
+Could you clarify if we require additional entitlements for the LDAP user when we move to production?
