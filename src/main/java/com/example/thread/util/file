@@ -1,19 +1,15 @@
-        JsonNodeFactory factory = new JsonNodeFactory(false);
-        // Create a new ArrayNode
-        ArrayNode newArrayNode = new ArrayNode(factory);
+catch (HttpClientErrorException.NotFound ex) {
+    String responseMessage = ex.getResponseBodyAsString();
+    JsonNode rootNode = convertResponseToJsonNode(responseMessage);
 
-        // Traverse old ArrayNode
-        for (JsonNode node : arrayNode) {
-            // Create a new ObjectNode
-            ObjectNode newObjectNode = factory.objectNode();
-            // Traverse each field in the object
-            node.fields().forEachRemaining(field -> {
-                String stringValue = field.getValue().asText(); // Convert value to string
-                newObjectNode.put(field.getKey(), stringValue);
-            });
-            newArrayNode.add(newObjectNode);
-        }
 
-        // Now you can use your newArrayNode for the csv conversion
-        System.out.println(newArrayNode);
+    JsonNode firstChildResponse = rootNode.path("errors").path(0);
+
+    // Checking the existence of the code in the first child and comparing its value
+    if ("".equals(firstChildResponse.path("code").asText())) {
+        return endpointResponseData;
     }
+
+    // If the code is not "", throw an exception
+    throw new Exception(ex);
+}
