@@ -1,15 +1,32 @@
-catch (HttpClientErrorException.NotFound ex) {
-    String responseMessage = ex.getResponseBodyAsString();
-    JsonNode rootNode = convertResponseToJsonNode(responseMessage);
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.LineReader;
 
+import java.io.IOException;
+import java.net.URI;
 
-    JsonNode firstChildResponse = rootNode.path("errors").path(0);
-
-    // Checking the existence of the code in the first child and comparing its value
-    if ("".equals(firstChildResponse.path("code").asText())) {
-        return endpointResponseData;
+public class HadoopFileLineCounter {
+    
+    public int countLinesInFile(String filePath) {
+        Configuration conf = new Configuration();
+        FileSystem fs = null;
+        FSDataInputStream in = null;
+        int lineCount = 0;
+        try {
+            fs = FileSystem.get(URI.create(filePath), conf);
+            in = fs.open(new Path(filePath));
+            LineReader lineReader = new LineReader(in, conf);
+            while (lineReader.readLine() > 0) {
+                lineCount++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            IOUtils.closeStream(in);
+        }
+        return lineCount;
     }
-
-    // If the code is not "", throw an exception
-    throw new Exception(ex);
 }
